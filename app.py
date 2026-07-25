@@ -19,14 +19,12 @@ def inject_custom_css(css_file):
 
 inject_custom_css("style.css")
 
-
 st.markdown("""
     <div class="app-header">
         <h1 class="main-title"> AI Face Analyzer</h1>
         <p class="sub-title">Upload any photo, and our AI will analyze Age, Gender, and Emotion with high accuracy!</p>
     </div>
 """, unsafe_allow_html=True)
-
 
 upload_col, result_col = st.columns([1, 1], gap="large")
 
@@ -48,15 +46,15 @@ with result_col:
             cv_img = cv2.cvtColor(img_bytes, cv2.COLOR_RGB2BGR)
             
             try:
+                # Optimized for Low Memory / Streamlit Free Tier
                 results = DeepFace.analyze(
                     img_path=cv_img,
                     actions=['age', 'gender', 'emotion'],
-                    detector_backend='retinaface',
+                    detector_backend='opencv',
                     align=True,
-                    enforce_detection=True
+                    enforce_detection=False
                 )
                 
- 
                 face_data = results[0] if isinstance(results, list) else results
                 
                 age = int(face_data['age'])
