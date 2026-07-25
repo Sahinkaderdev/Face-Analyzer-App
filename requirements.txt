@@ -1,6 +1,4 @@
 streamlit
 deepface
 opencv-python-headless
-pillow
 tf-keras
-tf-keras-vis
