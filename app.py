@@ -1,6 +1,3 @@
-Yeh raha aapka bilkul **clean code** bina kisi bhi comment ke. Aap isko copy karke apni `app.py` file me paste kar lijiye:
-
-```python
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -71,4 +68,3 @@ with right_col:
                 st.caption(f"Error details: {str(e)}")
     else:
         st.info("Please upload a photo from the left panel to get analysis results.")
-
