@@ -1,12 +1,2 @@
 streamlit
 opencv-python-headless
-opencv-data
-tf-keras
-deepface
-numpy
-Pillow
-gdown
-retina-face
-mtcnn
-fire
-flask
