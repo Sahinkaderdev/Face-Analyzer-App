@@ -1,68 +1,107 @@
-import os
+import streamlit as st
 import cv2
 import numpy as np
-import streamlit as st
-from deepface import DeepFace
 from PIL import Image
+from deepface import DeepFace
 
-st.set_page_config(page_title="AI Face Analyzer", page_icon="👤", layout="centered")
+st.set_page_config(
+    page_title="Face Metrics AI", 
+    page_icon="🧑‍🦱", 
+    layout="wide"
+)
 
-st.title("👤 AI Face Analyzer")
-st.write("Upload a photo to analyze age, gender, emotion, and ethnicity.")
+def inject_custom_css(css_file):
+    try:
+        with open(css_file) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error(f"Could not find '{css_file}'. Please check your directory.")
 
-uploaded_file = st.file_uploader("Choose a clear portrait photo...", type=["jpg", "jpeg", "png"])
+inject_custom_css("style.css")
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Photo", use_column_width=True)
+st.markdown("""
+    <div class="app-header">
+        <h1 class="main-title"> AI Face Analyzer</h1>
+        <p class="sub-title">Upload any photo, and our AI will analyze Age, Gender, and Emotion with high accuracy!</p>
+    </div>
+""", unsafe_allow_html=True)
 
-    temp_path = "temp_input_image.jpg"
-    image.convert("RGB").save(temp_path)
+upload_col, result_col = st.columns([1, 1], gap="large")
 
-    if st.button("🔍 Analyze Face", type="primary"):
-        with st.spinner("Analyzing face features... Please wait."):
+with upload_col:
+    st.subheader(" Upload Section")
+    uploaded_file = st.file_uploader("Choose a photo (JPG, PNG)...", type=["jpg", "jpeg", "png"])
+    
+    if uploaded_file is not None:
+        user_image = Image.open(uploaded_file)
+        st.image(user_image, caption="Uploaded Input", use_container_width=True)
+
+with result_col:
+    st.subheader(" Analysis Output")
+    
+    if uploaded_file is not None:
+        with st.spinner("Analyzing facial features and emotion geometry..."):
+            
+            img_bytes = np.array(user_image)
+            cv_img = cv2.cvtColor(img_bytes, cv2.COLOR_RGB2BGR)
+            
             try:
+                # Optimized for Low Memory / Streamlit Free Tier
                 results = DeepFace.analyze(
-                    img_path=temp_path,
-                    actions=['age', 'gender', 'race', 'emotion'],
-                    detector_backend='mtcnn',
+                    img_path=cv_img,
+                    actions=['age', 'gender', 'emotion'],
+                    detector_backend='opencv',
+                    align=True,
                     enforce_detection=False
                 )
-
+                
+                face_data = results[0] if isinstance(results, list) else results
+                
+                age = int(face_data['age'])
+                gender = face_data['dominant_gender']
+                gender_acc = face_data['gender'][gender]
+                
+                emotion = face_data['dominant_emotion']
+                emotion_acc = face_data['emotion'][emotion]
+                
                 st.success("Analysis Complete!")
+                
+                st.markdown("<div class='analysis-card'>", unsafe_allow_html=True)
+                
+                col_age, col_gender, col_mood = st.columns(3)
+                
+                with col_age:
+                    st.metric(
+                        label="Predicted Age", 
+                        value=f"~{age} yrs", 
+                        delta=f"Est: {max(0, age-2)}-{age+2} yrs"
+                    )
+                
+                with col_gender:
+                    st.metric(
+                        label="Gender", 
+                        value=str(gender).capitalize(), 
+                        delta=f"{gender_acc:.1f}% Confidence"
+                    )
+                
+                with col_mood:
+                    st.metric(
+                        label="Primary Mood", 
+                        value=str(emotion).capitalize(), 
+                        delta=f"{emotion_acc:.1f}% Match"
+                    )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                with st.expander(" Emotion Distribution"):
+                    emotions_sorted = sorted(face_data['emotion'].items(), key=lambda x: x[1], reverse=True)
+                    for emo_name, score in emotions_sorted:
+                        st.write(f"**{emo_name.capitalize()}**: {score:.1f}%")
+                        st.progress(min(int(score), 100))
 
-                analysis = results[0] if isinstance(results, list) else results
+            except Exception as err:
+                st.error("Could not detect a clear face. Please upload a clear, front-facing portrait.")
+                st.caption(f"Debug Info: {str(err)}")
 
-                st.markdown("---")
-                st.subheader("📊 Analysis Results")
-
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.metric("Estimated Age", f"{analysis.get('age', 'N/A')} years")
-
-                    gender_data = analysis.get('gender', {})
-                    if isinstance(gender_data, dict):
-                        dominant_gender = max(gender_data, key=gender_data.get)
-                    else:
-                        dominant_gender = str(gender_data)
-                    st.metric("Gender", dominant_gender.capitalize())
-
-                with col2:
-                    st.metric("Dominant Emotion", str(analysis.get('dominant_emotion', 'N/A')).capitalize())
-                    st.metric("Dominant Race/Ethnicity", str(analysis.get('dominant_race', 'N/A')).title())
-
-                st.markdown("---")
-                st.subheader("🎭 Emotion Breakdown")
-                emotions = analysis.get('emotion', {})
-                if emotions:
-                    for emotion_name, confidence in emotions.items():
-                        st.write(f"**{emotion_name.capitalize()}**: {confidence:.1f}%")
-                        st.progress(min(float(confidence) / 100.0, 1.0))
-
-            except Exception as e:
-                st.error(f"Error during analysis: {e}")
-
-            finally:
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
+    else:
+        st.info("👈 Upload an image on the left side to get real-time facial analytics.")
