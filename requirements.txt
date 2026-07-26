@@ -1,5 +1,11 @@
 streamlit
 opencv-python-headless
-deepface
+tf-keras
+deepface --no-deps
 numpy
 Pillow
+gdown
+retina-face
+mtcnn
+fire
+flask
