@@ -1,7 +1,7 @@
 streamlit
 opencv-python-headless
 tf-keras
-deepface --no-deps
+deepface
 numpy
 Pillow
 gdown
